@@ -2,50 +2,65 @@ services:
   db:
     image: postgres:17-alpine
     environment:
-      POSTGRES_DB: jobboard
-      POSTGRES_USER: jobboard
-      POSTGRES_PASSWORD: jobboard
+      POSTGRES_DB: ${POSTGRES_DB:-jobboard}
+      POSTGRES_USER: ${POSTGRES_USER:-jobboard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jobboard}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U jobboard"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jobboard} -d ${POSTGRES_DB:-jobboard}"]
       interval: 5s
       timeout: 3s
       retries: 10
 
   api:
-    build: ./backend
+    image: jobboard-api
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     environment:
-      DATABASE_URL: postgresql+psycopg://jobboard:jobboard@db:5432/jobboard
-      API_CORS_ORIGINS: '["http://localhost:5173"]'
-    command: >
-      sh -c "alembic upgrade head &&
-      uvicorn jobboard.api.main:app --host 0.0.0.0 --port 8000 --reload"
-    volumes:
-      - ./backend/src:/app/src
-      - ./backend/migrations:/app/migrations
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-jobboard}:${POSTGRES_PASSWORD:-jobboard}@db:5432/${POSTGRES_DB:-jobboard}
+      API_CORS_ORIGINS: '${API_CORS_ORIGINS:-["http://localhost:5173"]}'
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready')",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
   crawler:
-    build: ./backend
+    image: jobboard-api
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     environment:
-      DATABASE_URL: postgresql+psycopg://jobboard:jobboard@db:5432/jobboard
-    command: ["scrapy", "list"]
-    working_dir: /app
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-jobboard}:${POSTGRES_PASSWORD:-jobboard}@db:5432/${POSTGRES_DB:-jobboard}
+    command: ["python", "/app/scripts/crawl_sources.py", "/app/backend/sources.toml"]
     volumes:
-      - ./backend/src:/app/src
+      - ./backend/sources.toml:/app/backend/sources.toml:ro
+    working_dir: /app/backend
     depends_on:
       db:
         condition: service_healthy
     profiles: ["crawler"]
 
   frontend:
+    image: jobboard-frontend
     build:
       context: ./frontend
       args:
@@ -53,7 +68,8 @@ services:
     ports:
       - "5173:80"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
 volumes:
   postgres_data:

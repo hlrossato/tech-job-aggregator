@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import fcntl
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -32,7 +33,11 @@ def main() -> int:
         for source in load_sources(config_path):
             if not source.enabled:
                 continue
-            command = ["uv", "run", "scrapy", "crawl", source.adapter]
+            scrapy = shutil.which("scrapy")
+            if scrapy is None:
+                command = ["uv", "run", "scrapy", "crawl", source.adapter]
+            else:
+                command = [scrapy, "crawl", source.adapter]
             for key, value in source.spider_args().items():
                 command.extend(["-a", f"{key}={value}"])
             print(" ".join(command), flush=True)

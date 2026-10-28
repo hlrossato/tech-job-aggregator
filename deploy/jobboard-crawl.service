@@ -1,9 +1,10 @@
 [Unit]
 Description=Technology jobs aggregator crawl
-After=network.target postgresql.service
+After=network.target docker.service
+Requires=docker.service
 
 [Service]
 Type=oneshot
 WorkingDirectory=/opt/technology-jobs-aggregator
-ExecStart=/usr/bin/python3 scripts/crawl_sources.py backend/sources.toml
+ExecStart=docker compose -f compose.yml -f compose.prod.yml run --rm crawler
 Nice=10

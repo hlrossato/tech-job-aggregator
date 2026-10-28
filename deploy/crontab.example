@@ -1,5 +1,6 @@
 # Daily crawl of enabled sources, then expire leftovers older than 48 hours.
-15 3 * * * cd /opt/technology-jobs-aggregator && /usr/bin/python3 scripts/crawl_sources.py backend/sources.toml >> /var/log/jobboard-crawl.log 2>&1
-45 3 * * * cd /opt/technology-jobs-aggregator && /usr/bin/python3 scripts/expire_unseen.py demo --hours 48 >> /var/log/jobboard-expire.log 2>&1
-0 4 * * * /opt/technology-jobs-aggregator/scripts/backup_db.sh >> /var/log/jobboard-backup.log 2>&1
-*/5 * * * * /opt/technology-jobs-aggregator/scripts/check_health.sh >> /var/log/jobboard-health.log 2>&1
+# Run from a checkout that has compose.yml, compose.prod.yml, and a production .env.
+15 3 * * * cd /opt/technology-jobs-aggregator && docker compose -f compose.yml -f compose.prod.yml run --rm crawler >> /var/log/jobboard-crawl.log 2>&1
+45 3 * * * cd /opt/technology-jobs-aggregator && docker compose -f compose.yml -f compose.prod.yml run --rm api python /app/scripts/expire_unseen.py demo --hours 48 >> /var/log/jobboard-expire.log 2>&1
+0 4 * * * cd /opt/technology-jobs-aggregator && BACKUP_VIA_DOCKER=1 ./scripts/backup_db.sh >> /var/log/jobboard-backup.log 2>&1
+*/5 * * * * cd /opt/technology-jobs-aggregator && HEALTHCHECK_URL=http://127.0.0.1 ./scripts/check_health.sh >> /var/log/jobboard-health.log 2>&1
