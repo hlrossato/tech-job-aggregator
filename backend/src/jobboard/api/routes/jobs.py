@@ -2,11 +2,14 @@ from datetime import datetime
 from typing import Annotated, Literal
 from uuid import UUID
 
+import structlog
 from fastapi import APIRouter, HTTPException, Query, status
 
 from jobboard.api.dependencies import SearchServiceDependency
 from jobboard.api.schemas import FacetsResponse, JobListResponse, JobResponse
 from jobboard.domain.models import JobSearchCriteria, WorkplaceType
+
+logger = structlog.get_logger("jobs.search")
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -41,7 +44,17 @@ def search_jobs(
         page=page,
         page_size=page_size,
     )
-    return JobListResponse.from_domain(service.search(criteria))
+    result = service.search(criteria)
+    logger.info(
+        "search",
+        query=query,
+        total=result.total,
+        page=page,
+        technologies=technologies,
+        country=country,
+        workplace_type=workplace_type,
+    )
+    return JobListResponse.from_domain(result)
 
 
 @router.get("/facets", response_model=FacetsResponse)

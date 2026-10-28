@@ -1,0 +1,57 @@
+# Enable a source only after reviewing its terms, robots.txt, and rate limits.
+# Public ATS JSON feeds are preferred over HTML scraping.
+
+[[sources]]
+key = "greenhouse-stripe"
+adapter = "greenhouse"
+board = "stripe"
+company = "Stripe"
+enabled = false
+frequency_minutes = 1440
+grace_minutes = 2880
+rate_limit_per_second = 0.5
+compliance_notes = "Public Greenhouse board API. Confirm current terms before enabling."
+
+[[sources]]
+key = "greenhouse-cloudflare"
+adapter = "greenhouse"
+board = "cloudflare"
+company = "Cloudflare"
+enabled = false
+frequency_minutes = 1440
+grace_minutes = 2880
+rate_limit_per_second = 0.5
+compliance_notes = "Public Greenhouse board API."
+
+[[sources]]
+key = "lever-netflix"
+adapter = "lever"
+site = "netflix"
+company = "Netflix"
+enabled = false
+frequency_minutes = 1440
+grace_minutes = 2880
+rate_limit_per_second = 0.5
+compliance_notes = "Public Lever postings JSON. Confirm current terms before enabling."
+
+[[sources]]
+key = "ashby-vercel"
+adapter = "ashby"
+board = "vercel"
+company = "Vercel"
+enabled = false
+frequency_minutes = 1440
+grace_minutes = 2880
+rate_limit_per_second = 0.5
+compliance_notes = "Public Ashby job board API."
+
+[[sources]]
+key = "schema-example"
+adapter = "schema_org"
+url = "https://example.com/careers"
+company = "Example"
+enabled = false
+frequency_minutes = 1440
+grace_minutes = 2880
+rate_limit_per_second = 0.2
+compliance_notes = "Generic Schema.org JobPosting extractor for allowlisted career pages."

@@ -1,0 +1,13 @@
+[
+  {
+    "id": "abc",
+    "text": "Site Reliability Engineer",
+    "hostedUrl": "https://jobs.lever.co/acme/abc",
+    "applyUrl": "https://jobs.lever.co/acme/abc/apply",
+    "createdAt": 1696118400000,
+    "workplaceType": "remote",
+    "descriptionPlain": "Kubernetes and Terraform",
+    "additional": "<p>On-call rotation</p>",
+    "categories": {"location": "Remote", "commitment": "Full-time"}
+  }
+]

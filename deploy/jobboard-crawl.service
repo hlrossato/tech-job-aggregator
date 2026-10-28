@@ -1,0 +1,9 @@
+[Unit]
+Description=Technology jobs aggregator crawl
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/technology-jobs-aggregator
+ExecStart=/usr/bin/python3 scripts/crawl_sources.py backend/sources.toml
+Nice=10

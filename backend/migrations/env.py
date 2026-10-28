@@ -1,11 +1,15 @@
+import sys
 from logging.config import fileConfig
+from pathlib import Path
 
 from alembic import context
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from sqlalchemy import engine_from_config, pool
 
 from jobboard.config import get_settings
-from jobboard.infrastructure.db.base import Base
 from jobboard.infrastructure.db import models  # noqa: F401
+from jobboard.infrastructure.db.base import Base
 
 config = context.config
 if config.config_file_name:

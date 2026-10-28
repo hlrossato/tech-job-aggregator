@@ -1,5 +1,10 @@
-from jobboard.application.classification import RuleBasedTechnologyClassifier
-from jobboard.application.normalization import make_fingerprint, normalize_url
+from jobboard.application.classification import RuleBasedTechnologyClassifier, detect_seniority
+from jobboard.application.normalization import (
+    make_fingerprint,
+    normalize_country_code,
+    normalize_url,
+    normalize_workplace,
+)
 
 
 def test_classifies_technology_and_role_from_title_and_description() -> None:
@@ -24,3 +29,9 @@ def test_fingerprint_is_case_and_whitespace_insensitive() -> None:
     second = make_fingerprint("ACME", "Python Developer", "brazil")
 
     assert first == second
+
+
+def test_country_workplace_and_seniority_helpers() -> None:
+    assert normalize_country_code(None, "Remote, Brazil") == "BR"
+    assert normalize_workplace("unspecified", "Remote-friendly") == "remote"
+    assert detect_seniority("Desenvolvedor C# Pleno") == "mid"

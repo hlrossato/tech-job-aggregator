@@ -4,7 +4,6 @@ import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
-from sqlalchemy.orm import Session
 
 from jobboard.api.dependencies import SessionDependency
 from jobboard.api.routes.jobs import router as jobs_router

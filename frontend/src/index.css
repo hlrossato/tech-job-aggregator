@@ -1,0 +1,171 @@
+:root {
+  color: #1c1915;
+  background: #f4efe6;
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  line-height: 1.45;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at top, #fffaf1 0%, #f4efe6 42%, #e8dfd0 100%);
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+}
+
+.page {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 48px 20px 80px;
+}
+
+.hero {
+  margin-bottom: 32px;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  color: #6f6558;
+  margin: 0 0 8px;
+}
+
+h1 {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  margin: 0 0 12px;
+}
+
+.lede,
+.muted,
+.status {
+  color: #5b5348;
+}
+
+.search-bar input,
+.filters select,
+.apply,
+.pagination button {
+  font: inherit;
+}
+
+.search-bar input {
+  width: 100%;
+  margin-top: 24px;
+  padding: 16px 18px;
+  border: 1px solid #d8cbb8;
+  border-radius: 999px;
+  background: #fffdf8;
+  font-size: 1.05rem;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.filters select,
+.pagination button {
+  border: 1px solid #d8cbb8;
+  background: #fffdf8;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.job-card,
+.detail .description {
+  background: #fffdf8;
+  border: 1px solid #eadfcf;
+  border-radius: 18px;
+}
+
+.job-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px;
+  margin-bottom: 12px;
+}
+
+.job-title {
+  font-size: 1.2rem;
+  text-decoration: none;
+}
+
+.job-title:hover {
+  text-decoration: underline;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tags span {
+  background: #efe4d3;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.85rem;
+}
+
+.apply {
+  align-self: center;
+  background: #1c1915;
+  color: #f4efe6;
+  text-decoration: none;
+  padding: 10px 16px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.status.error {
+  color: #8a2f1d;
+}
+
+.detail h1 {
+  font-size: 2.4rem;
+}
+
+.detail .description {
+  white-space: pre-wrap;
+  padding: 20px;
+  margin-top: 24px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+@media (max-width: 640px) {
+  .job-card {
+    flex-direction: column;
+  }
+
+  .apply {
+    align-self: stretch;
+    text-align: center;
+  }
+}

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import urlsplit
 from uuid import UUID
@@ -7,7 +7,7 @@ from scrapy import Spider
 from scrapy.exceptions import DropItem
 
 from jobboard.application.classification import RuleBasedTechnologyClassifier
-from jobboard.application.services import IngestJobService
+from jobboard.application.services import ExpireJobsService, IngestJobService
 from jobboard.domain.models import JobDraft, WorkplaceType
 from jobboard.infrastructure.repositories.sqlalchemy import SQLAlchemyUnitOfWork
 
@@ -47,7 +47,20 @@ class DatabasePipeline:
         self.classifier = RuleBasedTechnologyClassifier()
         self.run_id: UUID | None = None
         self.source_key: str | None = None
+        self.started_at: datetime | None = None
         self.item_count = 0
+        self.error_count = 0
+
+    def open_spider(self, spider: Spider) -> None:
+        source_key = getattr(spider, "source_key", spider.name)
+        source_name = getattr(spider, "source_name", spider.name)
+        source_url = getattr(spider, "source_url", "")
+        self.source_key = source_key
+        self.started_at = datetime.now(UTC)
+        with self.uow_factory() as uow:
+            uow.jobs.ensure_source(source_key, source_name, source_url, spider.name)
+            self.run_id = uow.crawl_runs.start(source_key)
+            uow.commit()
 
     def process_item(self, item: dict[str, Any], spider: Spider) -> dict[str, Any]:
         try:
@@ -80,17 +93,17 @@ class DatabasePipeline:
         )
         IngestJobService(self.uow_factory(), self.classifier).ingest(draft)
         self.item_count += 1
-        self.source_key = draft.source_key
-        if self.run_id is None:
-            with self.uow_factory() as uow:
-                self.run_id = uow.crawl_runs.start(draft.source_key)
-                uow.commit()
         return item
 
     def close_spider(self, spider: Spider) -> None:
-        if self.run_id is None:
+        if self.run_id is None or self.source_key is None or self.started_at is None:
             return
         errors = int(spider.crawler.stats.get_value("log_count/ERROR", 0))
+        self.error_count = errors
+        grace_minutes = int(getattr(spider, "grace_minutes", 1440))
+        cutoff = self.started_at - timedelta(minutes=grace_minutes)
+        expire_service = ExpireJobsService(self.uow_factory())
+        expire_service.expire_unseen(self.source_key, cutoff)
         with self.uow_factory() as uow:
             uow.crawl_runs.finish(
                 self.run_id,

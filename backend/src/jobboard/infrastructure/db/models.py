@@ -3,6 +3,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import (
     Boolean,
+    Computed,
     DateTime,
     Float,
     ForeignKey,
@@ -75,6 +76,7 @@ class JobModel(Base):
         Index("ix_jobs_status_published", "status", "published_at"),
         Index("ix_jobs_country_status", "country_code", "status"),
         Index("ix_jobs_fingerprint", "fingerprint"),
+        Index("ix_jobs_source_canonical", "source_id", "canonical_url"),
         Index("ix_jobs_search_vector", "search_vector", postgresql_using="gin"),
     )
 
@@ -103,9 +105,20 @@ class JobModel(Base):
     status: Mapped[str] = mapped_column(String(20), default="active", index=True)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    search_vector: Mapped[str | None] = mapped_column(TSVECTOR)
+    first_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    search_vector: Mapped[str | None] = mapped_column(
+        TSVECTOR,
+        Computed(
+            "setweight(to_tsvector('simple', coalesce(title, '')), 'A') || "
+            "setweight(to_tsvector('simple', coalesce(description, '')), 'B')",
+            persisted=True,
+        ),
+    )
 
     source: Mapped[SourceModel] = relationship(back_populates="jobs")
     company: Mapped[CompanyModel] = relationship(back_populates="jobs")

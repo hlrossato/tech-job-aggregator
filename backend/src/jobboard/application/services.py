@@ -2,8 +2,22 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID
 
-from jobboard.application.normalization import make_fingerprint, normalize_text, normalize_url
-from jobboard.domain.models import Facets, JobDraft, JobSearchCriteria, JobView, SearchResult
+from jobboard.application.classification import detect_seniority
+from jobboard.application.normalization import (
+    make_fingerprint,
+    normalize_country_code,
+    normalize_text,
+    normalize_url,
+    normalize_workplace,
+)
+from jobboard.domain.models import (
+    Facets,
+    JobDraft,
+    JobSearchCriteria,
+    JobView,
+    SearchResult,
+    WorkplaceType,
+)
 from jobboard.domain.repositories import JobRepository, TechnologyClassifier, UnitOfWork
 
 
@@ -38,6 +52,11 @@ class IngestJobService:
             canonical_url=normalize_url(draft.canonical_url),
             apply_url=normalize_url(draft.apply_url),
             location_text=normalize_text(draft.location_text) if draft.location_text else None,
+            country_code=normalize_country_code(draft.country_code, draft.location_text),
+            workplace_type=WorkplaceType(
+                normalize_workplace(draft.workplace_type.value, draft.location_text)
+            ),
+            seniority=draft.seniority or detect_seniority(draft.title),
             technologies=draft.technologies or tuple(technologies),
             role_category=draft.role_category or role_category,
             classification_confidence=draft.classification_confidence or confidence,

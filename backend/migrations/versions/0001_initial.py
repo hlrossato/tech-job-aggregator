@@ -93,6 +93,7 @@ def upgrade() -> None:
     op.create_index("ix_jobs_status_published", "jobs", ["status", "published_at"])
     op.create_index("ix_jobs_country_status", "jobs", ["country_code", "status"])
     op.create_index("ix_jobs_fingerprint", "jobs", ["fingerprint"])
+    op.create_index("ix_jobs_source_canonical", "jobs", ["source_id", "canonical_url"])
     for column in ("country_code", "workplace_type", "employment_type", "seniority", "role_category", "status"):
         op.create_index(f"ix_jobs_{column}", "jobs", [column])
     op.create_table(

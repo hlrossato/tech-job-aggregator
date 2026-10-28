@@ -20,6 +20,14 @@ TECHNOLOGY_ALIASES: dict[str, tuple[str, ...]] = {
     "dbt": ("dbt",),
 }
 
+SENIORITY_ALIASES: dict[str, tuple[str, ...]] = {
+    "junior": ("junior", "jr", "entry-level", "entry level", "estagiário", "intern"),
+    "mid": ("mid-level", "mid level", "pleno"),
+    "senior": ("senior", "sr "),
+    "staff": ("staff",),
+    "principal": ("principal", "distinguished"),
+}
+
 ROLE_ALIASES: dict[str, tuple[str, ...]] = {
     "software-engineering": ("software engineer", "developer", "programador", "desenvolvedor"),
     "devops-sre": ("devops", "site reliability", "sre", "platform engineer"),
@@ -48,9 +56,22 @@ class RuleBasedTechnologyClassifier:
 
         title_folded = title.casefold()
         role_scores = {
-            role: sum(3 if _contains(title_folded, alias) else 1 if _contains(text, alias) else 0 for alias in aliases)
+            role: sum(
+                3 if _contains(title_folded, alias) else 1 if _contains(text, alias) else 0
+                for alias in aliases
+            )
             for role, aliases in ROLE_ALIASES.items()
         }
-        role_category = max(role_scores, key=role_scores.get) if any(role_scores.values()) else None
-        confidence = min(1.0, (role_scores.get(role_category, 0) * 0.2) + (len(technologies) * 0.08))
+        scored = any(role_scores.values())
+        role_category = max(role_scores, key=lambda role: role_scores[role]) if scored else None
+        role_points = (role_scores[role_category] if role_category else 0) * 0.2
+        confidence = min(1.0, role_points + (len(technologies) * 0.08))
         return technologies, role_category, confidence
+
+
+def detect_seniority(title: str) -> str | None:
+    folded = f" {title.casefold()} "
+    for seniority, aliases in SENIORITY_ALIASES.items():
+        if any(alias in folded for alias in aliases):
+            return seniority
+    return None

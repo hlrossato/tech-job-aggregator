@@ -1,5 +1,6 @@
 import re
 from datetime import UTC, datetime
+from typing import Any, Self
 from uuid import UUID
 
 from sqlalchemy import Select, func, or_, select, update
@@ -14,6 +15,7 @@ from jobboard.domain.models import (
     SearchResult,
     WorkplaceType,
 )
+from jobboard.domain.repositories import CrawlRunRepository, JobRepository
 from jobboard.infrastructure.db.models import (
     CompanyModel,
     CrawlRunModel,
@@ -64,7 +66,7 @@ class SQLAlchemyJobRepository:
         model = self.session.scalar(statement)
         return _to_view(model) if model else None
 
-    def _filtered(self, criteria: JobSearchCriteria) -> Select[tuple[JobModel]]:
+    def _filtered(self, criteria: JobSearchCriteria) -> Select[Any]:
         statement = select(JobModel).where(JobModel.status == JobStatus.ACTIVE.value)
         if criteria.query:
             query = func.websearch_to_tsquery("simple", criteria.query)
@@ -88,9 +90,7 @@ class SQLAlchemyJobRepository:
         if criteria.country_code:
             statement = statement.where(JobModel.country_code == criteria.country_code.upper())
         if criteria.workplace_type:
-            statement = statement.where(
-                JobModel.workplace_type == criteria.workplace_type.value
-            )
+            statement = statement.where(JobModel.workplace_type == criteria.workplace_type.value)
         if criteria.seniority:
             statement = statement.where(JobModel.seniority == criteria.seniority)
         if criteria.employment_type:
@@ -110,9 +110,7 @@ class SQLAlchemyJobRepository:
         count_statement = select(func.count()).select_from(filtered.order_by(None).subquery())
         total = self.session.scalar(count_statement) or 0
         statement = (
-            filtered.options(
-                selectinload(JobModel.company), selectinload(JobModel.technologies)
-            )
+            filtered.options(selectinload(JobModel.company), selectinload(JobModel.technologies))
             .offset((criteria.page - 1) * criteria.page_size)
             .limit(criteria.page_size)
         )
@@ -136,11 +134,11 @@ class SQLAlchemyJobRepository:
             ).all()
         )
 
-        def grouped(column: object) -> dict[str, int]:
+        def grouped(column: Any) -> dict[str, int]:
             return dict(
                 self.session.execute(
                     select(column, func.count(JobModel.id))
-                    .where(JobModel.status == active, column.is_not(None))  # type: ignore[attr-defined]
+                    .where(JobModel.status == active, column.is_not(None))
                     .group_by(column)
                 ).all()
             )
@@ -151,6 +149,16 @@ class SQLAlchemyJobRepository:
             role_categories=grouped(JobModel.role_category),
             workplace_types=grouped(JobModel.workplace_type),
         )
+
+    def ensure_source(self, key: str, name: str, base_url: str, adapter: str) -> None:
+        source = self.session.scalar(select(SourceModel).where(SourceModel.key == key))
+        if source is None:
+            self.session.add(SourceModel(key=key, name=name, base_url=base_url, adapter=adapter))
+            self.session.flush()
+            return
+        source.name = name
+        source.base_url = base_url
+        source.adapter = adapter
 
     def upsert(self, draft: JobDraft, fingerprint: str) -> UUID:
         source = self.session.scalar(select(SourceModel).where(SourceModel.key == draft.source_key))
@@ -172,14 +180,21 @@ class SQLAlchemyJobRepository:
             self.session.add(company)
             self.session.flush()
 
-        identity = [JobModel.source_id == source.id]
+        job = None
         if draft.external_id:
-            identity.append(JobModel.external_id == draft.external_id)
-        else:
-            identity.extend(
-                [JobModel.canonical_url == draft.canonical_url, JobModel.fingerprint == fingerprint]
+            job = self.session.scalar(
+                select(JobModel).where(
+                    JobModel.source_id == source.id,
+                    JobModel.external_id == draft.external_id,
+                )
             )
-        job = self.session.scalar(select(JobModel).where(*identity))
+        if job is None:
+            job = self.session.scalar(
+                select(JobModel).where(
+                    JobModel.source_id == source.id,
+                    JobModel.canonical_url == draft.canonical_url,
+                )
+            )
         values = {
             "company_id": company.id,
             "external_id": draft.external_id,
@@ -227,9 +242,7 @@ class SQLAlchemyJobRepository:
         return job.id
 
     def expire_unseen(self, source_key: str, seen_before: datetime) -> int:
-        source_id = self.session.scalar(
-            select(SourceModel.id).where(SourceModel.key == source_key)
-        )
+        source_id = self.session.scalar(select(SourceModel.id).where(SourceModel.key == source_key))
         if source_id is None:
             return 0
         result = self.session.execute(
@@ -241,7 +254,7 @@ class SQLAlchemyJobRepository:
             )
             .values(status=JobStatus.EXPIRED.value)
         )
-        return result.rowcount
+        return int(getattr(result, "rowcount", 0) or 0)
 
 
 class SQLAlchemyCrawlRunRepository:
@@ -249,9 +262,7 @@ class SQLAlchemyCrawlRunRepository:
         self.session = session
 
     def start(self, source_key: str) -> UUID:
-        source_id = self.session.scalar(
-            select(SourceModel.id).where(SourceModel.key == source_key)
-        )
+        source_id = self.session.scalar(select(SourceModel.id).where(SourceModel.key == source_key))
         if source_id is None:
             raise ValueError(f"Unknown source: {source_key}")
         run = CrawlRunModel(source_id=source_id)
@@ -282,10 +293,10 @@ class SQLAlchemyUnitOfWork:
     def __init__(self, session_factory: object = SessionFactory):
         self.session_factory = session_factory
 
-    def __enter__(self) -> "SQLAlchemyUnitOfWork":
+    def __enter__(self) -> Self:
         self.session = self.session_factory()  # type: ignore[operator]
-        self.jobs = SQLAlchemyJobRepository(self.session)
-        self.crawl_runs = SQLAlchemyCrawlRunRepository(self.session)
+        self.jobs: JobRepository = SQLAlchemyJobRepository(self.session)
+        self.crawl_runs: CrawlRunRepository = SQLAlchemyCrawlRunRepository(self.session)
         return self
 
     def __exit__(self, *args: object) -> None:

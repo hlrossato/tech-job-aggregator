@@ -1,6 +1,6 @@
 from collections.abc import Iterable
 from datetime import datetime
-from typing import Protocol
+from typing import Protocol, Self
 from uuid import UUID
 
 from jobboard.domain.models import Facets, JobDraft, JobSearchCriteria, JobView, SearchResult
@@ -12,6 +12,8 @@ class JobRepository(Protocol):
     def search(self, criteria: JobSearchCriteria) -> SearchResult: ...
 
     def facets(self) -> Facets: ...
+
+    def ensure_source(self, key: str, name: str, base_url: str, adapter: str) -> None: ...
 
     def upsert(self, draft: JobDraft, fingerprint: str) -> UUID: ...
 
@@ -36,7 +38,7 @@ class UnitOfWork(Protocol):
     jobs: JobRepository
     crawl_runs: CrawlRunRepository
 
-    def __enter__(self) -> "UnitOfWork": ...
+    def __enter__(self) -> Self: ...
 
     def __exit__(self, *args: object) -> None: ...
 

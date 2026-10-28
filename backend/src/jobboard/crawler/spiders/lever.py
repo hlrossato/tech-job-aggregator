@@ -1,55 +1,38 @@
-from datetime import UTC, datetime
 from typing import Any
 
 import scrapy
-from bs4 import BeautifulSoup
+
+from jobboard.crawler.extractors import parse_lever_jobs
 
 
 class LeverSpider(scrapy.Spider):
     name = "lever"
     allowed_domains = ["api.lever.co"]
 
-    def __init__(self, site: str, company: str | None = None, *args: Any, **kwargs: Any):
+    def __init__(
+        self,
+        site: str,
+        company: str | None = None,
+        source_key: str | None = None,
+        grace_minutes: str = "1440",
+        *args: Any,
+        **kwargs: Any,
+    ):
         super().__init__(*args, **kwargs)
         self.site = site
         self.company = company or site.replace("-", " ").title()
         self.source_url = f"https://jobs.lever.co/{site}"
+        self.source_key = source_key or f"lever-{site}"
+        self.source_name = f"{self.company} Lever"
+        self.grace_minutes = int(grace_minutes)
 
-    def start_requests(self):
+    def start_requests(self) -> Any:
         yield scrapy.Request(f"https://api.lever.co/v0/postings/{self.site}?mode=json")
 
-    def parse(self, response):
-        for job in response.json():
-            categories = job.get("categories", {})
-            location = categories.get("location")
-            created_at = job.get("createdAt")
-            published = (
-                datetime.fromtimestamp(created_at / 1000, UTC).isoformat()
-                if created_at
-                else None
-            )
-            description = " ".join(
-                filter(
-                    None,
-                    (
-                        job.get("descriptionPlain"),
-                        BeautifulSoup(job.get("additional", ""), "html.parser").get_text(" "),
-                    ),
-                )
-            )
-            yield {
-                "source_key": f"lever-{self.site}",
-                "source_name": f"{self.company} Lever",
-                "source_base_url": self.source_url,
-                "source_adapter": "lever",
-                "external_id": job["id"],
-                "title": job["text"],
-                "company_name": self.company,
-                "description": description,
-                "canonical_url": job["hostedUrl"],
-                "apply_url": job.get("applyUrl", job["hostedUrl"]),
-                "location_text": location,
-                "workplace_type": job.get("workplaceType", "unspecified"),
-                "employment_type": categories.get("commitment"),
-                "published_at": published,
-            }
+    def parse(self, response: Any) -> Any:
+        yield from parse_lever_jobs(
+            response.json(),
+            site=self.site,
+            company=self.company,
+            source_url=self.source_url,
+        )

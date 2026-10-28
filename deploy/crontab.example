@@ -1,0 +1,5 @@
+# Daily crawl of enabled sources, then expire leftovers older than 48 hours.
+15 3 * * * cd /opt/technology-jobs-aggregator && /usr/bin/python3 scripts/crawl_sources.py backend/sources.toml >> /var/log/jobboard-crawl.log 2>&1
+45 3 * * * cd /opt/technology-jobs-aggregator && /usr/bin/python3 scripts/expire_unseen.py demo --hours 48 >> /var/log/jobboard-expire.log 2>&1
+0 4 * * * /opt/technology-jobs-aggregator/scripts/backup_db.sh >> /var/log/jobboard-backup.log 2>&1
+*/5 * * * * /opt/technology-jobs-aggregator/scripts/check_health.sh >> /var/log/jobboard-health.log 2>&1
