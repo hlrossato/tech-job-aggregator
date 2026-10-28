@@ -1,0 +1,19 @@
+[[sources]]
+key = "example-greenhouse"
+adapter = "greenhouse"
+board = "example"
+company = "Example"
+enabled = false
+frequency_minutes = 1440
+rate_limit_per_second = 1.0
+compliance_notes = "Enable only after reviewing source terms and robots policy."
+
+[[sources]]
+key = "example-schema"
+adapter = "schema_org"
+url = "https://example.com/careers"
+company = "Example"
+enabled = false
+frequency_minutes = 1440
+rate_limit_per_second = 0.5
+compliance_notes = "Public Schema.org JobPosting page."

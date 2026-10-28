@@ -1,0 +1,56 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: jobboard
+      POSTGRES_USER: jobboard
+      POSTGRES_PASSWORD: jobboard
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobboard"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://jobboard:jobboard@db:5432/jobboard
+      API_CORS_ORIGINS: '["http://localhost:5173"]'
+    command: >
+      sh -c "alembic upgrade head &&
+      uvicorn jobboard.api.main:app --host 0.0.0.0 --port 8000 --reload"
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/migrations:/app/migrations
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  crawler:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://jobboard:jobboard@db:5432/jobboard
+    command: ["scrapy", "list"]
+    working_dir: /app
+    volumes:
+      - ./backend/src:/app/src
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles: ["crawler"]
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
