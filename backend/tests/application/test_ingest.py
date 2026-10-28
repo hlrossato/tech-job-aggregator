@@ -14,7 +14,8 @@ def test_ingest_normalizes_and_classifies() -> None:
         external_id="1",
         title="  Senior Python Engineer  ",
         company_name="Acme",
-        description="Kubernetes and AWS on a remote team in Brazil.",
+        description="Kubernetes and AWS on a remote team in Brazil.\n\nOwn the platform.",
+        description_html="<p>Kubernetes and AWS on a remote team in Brazil.</p>",
         canonical_url="HTTPS://EXAMPLE.COM/jobs/1?utm_source=x",
         apply_url="https://example.com/jobs/1",
         location_text="Remote, Brazil",
@@ -30,6 +31,8 @@ def test_ingest_normalizes_and_classifies() -> None:
     assert stored.workplace_type.value == "remote"
     assert stored.seniority == "senior"
     assert "Python" in stored.technologies
+    assert "Own the platform." in stored.description
+    assert stored.description_html == "<p>Kubernetes and AWS on a remote team in Brazil.</p>"
     assert uow.committed
 
 

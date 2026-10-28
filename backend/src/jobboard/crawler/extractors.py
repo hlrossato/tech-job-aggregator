@@ -1,13 +1,107 @@
+import json
 from collections.abc import Iterable
 from datetime import UTC, datetime
+from html import escape
 from typing import Any
 from urllib.parse import urlsplit
 
 from bs4 import BeautifulSoup
 
+from jobboard.application.html_content import html_to_text, sanitize_html
 
-def html_to_text(value: str | None) -> str:
-    return BeautifulSoup(value or "", "html.parser").get_text(" ", strip=True)
+
+def _description(value: str | None) -> tuple[str, str | None]:
+    return html_to_text(value), sanitize_html(value)
+
+
+def _listing_payload(html: str) -> dict[str, Any] | None:
+    soup = BeautifulSoup(html, "html.parser")
+    node = soup.find("script", id="__NEXT_DATA__")
+    raw = node.string if node is not None else None
+    if not raw:
+        return None
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    listing = payload.get("props", {}).get("pageProps", {}).get("listing")
+    return listing if isinstance(listing, dict) else None
+
+
+def _posting_sections(html: str) -> str | None:
+    soup = BeautifulSoup(html, "html.parser")
+    parts: list[str] = []
+    for block in soup.select(".careers-listing-details__body"):
+        title = block.select_one(".careers-listing-details__body-title")
+        content = block.select_one(".careers-listing-details__body-content")
+        if title is None or content is None:
+            continue
+        heading = title.get_text(" ", strip=True)
+        inner = content.decode_contents().strip()
+        if not heading or not inner:
+            continue
+        parts.append(f"<h2>{escape(heading)}</h2>{inner}")
+    return "".join(parts) or None
+
+
+def apply_posting_page(item: dict[str, Any], html: str) -> dict[str, Any]:
+    """Fill description sections and sidebar facts from the public posting page."""
+    updated = dict(item)
+    sections = _posting_sections(html)
+    if sections:
+        description, description_html = _description(sections)
+        if description:
+            updated["description"] = description
+            updated["description_html"] = description_html
+    listing = _listing_payload(html)
+    if listing is None:
+        return updated
+    teams = [
+        team.get("name")
+        for team in listing.get("teams") or []
+        if isinstance(team, dict) and team.get("name")
+    ]
+    offices: list[str] = []
+    remotes: list[str] = []
+    country_code: str | None = None
+    for location in listing.get("locations") or []:
+        if not isinstance(location, dict) or not location.get("name"):
+            continue
+        name = str(location["name"])
+        if location.get("remote"):
+            remotes.append(name)
+        else:
+            offices.append(name)
+        if country_code is None and location.get("countryCode"):
+            country_code = str(location["countryCode"])
+    if teams:
+        updated["team"] = ", ".join(str(name) for name in teams)
+    if offices:
+        updated["office_locations"] = ", ".join(offices)
+    if remotes:
+        updated["remote_location"] = ", ".join(remotes)
+    if offices and remotes:
+        updated["workplace_type"] = "hybrid"
+    elif remotes:
+        updated["workplace_type"] = "remote"
+    elif offices:
+        updated["workplace_type"] = "onsite"
+    employment = listing.get("employmentType")
+    if employment:
+        updated["employment_type"] = str(employment)
+    if country_code and not updated.get("country_code"):
+        updated["country_code"] = country_code
+    for field, key in (
+        ("salary_min", "salaryMin"),
+        ("salary_max", "salaryMax"),
+    ):
+        value = listing.get(key)
+        if isinstance(value, int):
+            updated[field] = value
+    currency = listing.get("salaryCurrency")
+    if isinstance(currency, str) and currency:
+        updated["salary_currency"] = currency
+    return updated
 
 
 def _identifier(value: Any) -> str | None:
@@ -25,6 +119,7 @@ def parse_greenhouse_jobs(
     items: list[dict[str, Any]] = []
     for job in payload.get("jobs", []):
         location = (job.get("location") or {}).get("name")
+        description, description_html = _description(job.get("content"))
         items.append(
             {
                 "source_key": f"greenhouse-{board}",
@@ -34,7 +129,8 @@ def parse_greenhouse_jobs(
                 "external_id": str(job["id"]),
                 "title": job["title"],
                 "company_name": company,
-                "description": html_to_text(job.get("content")),
+                "description": description,
+                "description_html": description_html,
                 "canonical_url": job["absolute_url"],
                 "apply_url": job["absolute_url"],
                 "location_text": location,
@@ -58,12 +154,8 @@ def parse_lever_jobs(
         published = (
             datetime.fromtimestamp(created_at / 1000, UTC).isoformat() if created_at else None
         )
-        description = " ".join(
-            filter(
-                None,
-                (job.get("descriptionPlain"), html_to_text(job.get("additional"))),
-            )
-        )
+        additional_text, additional_html = _description(job.get("additional"))
+        description = " ".join(filter(None, (job.get("descriptionPlain"), additional_text)))
         items.append(
             {
                 "source_key": f"lever-{site}",
@@ -74,6 +166,7 @@ def parse_lever_jobs(
                 "title": job["text"],
                 "company_name": company,
                 "description": description,
+                "description_html": additional_html,
                 "canonical_url": job["hostedUrl"],
                 "apply_url": job.get("applyUrl", job["hostedUrl"]),
                 "location_text": location,
@@ -91,6 +184,9 @@ def parse_ashby_jobs(
     items: list[dict[str, Any]] = []
     for job in payload.get("jobs", []):
         location = job.get("location")
+        description, description_html = _description(
+            job.get("descriptionHtml") or job.get("descriptionPlain")
+        )
         items.append(
             {
                 "source_key": f"ashby-{board}",
@@ -100,9 +196,8 @@ def parse_ashby_jobs(
                 "external_id": job.get("id") or job.get("jobUrl"),
                 "title": job["title"],
                 "company_name": company,
-                "description": html_to_text(
-                    job.get("descriptionHtml") or job.get("descriptionPlain")
-                ),
+                "description": description,
+                "description_html": description_html,
                 "canonical_url": job["jobUrl"],
                 "apply_url": job.get("applyUrl", job["jobUrl"]),
                 "location_text": location,
@@ -155,6 +250,7 @@ def parse_schema_org_jobs(
         )
         canonical_url = job.get("url") or page_url
         country = address.get("addressCountry")
+        description, description_html = _description(job.get("description"))
         items.append(
             {
                 "source_key": source_key,
@@ -164,7 +260,8 @@ def parse_schema_org_jobs(
                 "external_id": _identifier(job.get("identifier")),
                 "title": job["title"],
                 "company_name": company or organization.get("name") or "Unknown company",
-                "description": html_to_text(job.get("description")),
+                "description": description,
+                "description_html": description_html,
                 "canonical_url": canonical_url,
                 "apply_url": canonical_url,
                 "location_text": location_text or None,

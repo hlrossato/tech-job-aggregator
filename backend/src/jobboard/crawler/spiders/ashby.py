@@ -29,6 +29,10 @@ class AshbySpider(scrapy.Spider):
     def start_requests(self) -> Any:
         yield scrapy.Request(f"https://api.ashbyhq.com/posting-api/job-board/{self.board}")
 
+    async def start(self) -> Any:
+        for request in self.start_requests():
+            yield request
+
     def parse(self, response: Any) -> Any:
         yield from parse_ashby_jobs(
             response.json(),

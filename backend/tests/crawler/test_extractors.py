@@ -20,6 +20,83 @@ def test_parse_greenhouse_fixture() -> None:
     assert jobs[0]["external_id"] == "42"
     assert jobs[0]["workplace_type"] == "remote"
     assert "Python" in jobs[0]["description"]
+    assert "<" not in jobs[0]["description"]
+    assert jobs[0]["description_html"] == "<p>Python and Django</p>"
+
+
+def test_posting_page_includes_sidebar_and_extra_sections() -> None:
+    from jobboard.crawler.extractors import apply_posting_page
+
+    html = """
+    <script id="__NEXT_DATA__" type="application/json">
+    {"props":{"pageProps":{"listing":{
+      "employmentType":"Full time",
+      "salaryMin":144300,
+      "salaryMax":216500,
+      "salaryCurrency":"USD",
+      "teams":[{"name":"Security"}],
+      "locations":[
+        {"name":"Remote in United States","remote":true,"countryCode":"US"},
+        {"name":"Atlanta","remote":false,"countryCode":"US"},
+        {"name":"South San Francisco HQ","remote":false,"countryCode":"US"}
+      ]
+    }}}}
+    </script>
+    <div class="careers-listing-details__body">
+      <h2 class="careers-listing-details__body-title">Who we are</h2>
+      <div class="careers-listing-details__body-content"><p>About Stripe.</p></div>
+    </div>
+    <div class="careers-listing-details__body">
+      <h2 class="careers-listing-details__body-title">Hybrid work at Stripe</h2>
+      <div class="careers-listing-details__body-content"><p>Office or remote.</p></div>
+    </div>
+    <div class="careers-listing-details__body">
+      <h2 class="careers-listing-details__body-title">Pay and benefits</h2>
+      <div class="careers-listing-details__body-content">
+        <p>The annual US base salary range is stated here.</p>
+      </div>
+    </div>
+    """
+    job = apply_posting_page({"description": "partial", "country_code": None}, html)
+    assert "Who we are" in job["description"]
+    assert "Hybrid work at Stripe" in job["description"]
+    assert "Pay and benefits" in job["description"]
+    assert "<h2>Hybrid work at Stripe</h2>" in job["description_html"]
+    assert job["team"] == "Security"
+    assert job["office_locations"] == "Atlanta, South San Francisco HQ"
+    assert job["remote_location"] == "Remote in United States"
+    assert job["employment_type"] == "Full time"
+    assert job["workplace_type"] == "hybrid"
+    assert job["salary_min"] == 144300
+    assert job["country_code"] == "US"
+
+
+def test_parse_greenhouse_unescapes_markup() -> None:
+    jobs = parse_greenhouse_jobs(
+        {
+            "jobs": [
+                {
+                    "id": 7,
+                    "title": "Backend Engineer",
+                    "absolute_url": "https://boards.greenhouse.io/acme/jobs/7",
+                    "location": {"name": "Remote"},
+                    "content": (
+                        "&lt;h2&gt;Who we are&lt;/h2&gt;"
+                        "&lt;ul&gt;&lt;li&gt;Python&lt;/li&gt;&lt;li&gt;PostgreSQL&lt;/li&gt;&lt;/ul&gt;"
+                        "&lt;script&gt;alert(1)&lt;/script&gt;"
+                    ),
+                }
+            ]
+        },
+        board="acme",
+        company="Acme",
+        source_url="https://boards.greenhouse.io/acme",
+    )
+    assert jobs[0]["description"] == "Who we are\nPython\nPostgreSQL"
+    assert "<script" not in (jobs[0]["description_html"] or "")
+    assert "alert" not in (jobs[0]["description_html"] or "")
+    assert "<h2>Who we are</h2>" in jobs[0]["description_html"]
+    assert "<li>Python</li>" in jobs[0]["description_html"]
 
 
 def test_parse_lever_and_ashby_fixtures() -> None:
@@ -53,6 +130,15 @@ def test_parse_schema_org_json_ld() -> None:
     )
     assert jobs[0]["title"] == "Security Engineer"
     assert jobs[0]["country_code"] == "BR"
+
+
+def test_posting_place_is_the_board() -> None:
+    from jobboard.infrastructure.repositories.sqlalchemy import posting_place_label
+
+    assert posting_place_label("greenhouse", "Stripe Greenhouse") == "Greenhouse"
+    assert posting_place_label("lever", "Netflix Lever") == "Lever"
+    assert posting_place_label("ashby", "Vercel Ashby") == "Ashby"
+    assert posting_place_label("demo", "Demo source") == "Demo source"
 
 
 def test_source_registry_loads_example(tmp_path: Path) -> None:

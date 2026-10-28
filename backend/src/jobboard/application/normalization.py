@@ -22,6 +22,22 @@ def normalize_text(value: str) -> str:
     return re.sub(r"\s+", " ", normalized).strip()
 
 
+def normalize_multiline(value: str) -> str:
+    normalized = unicodedata.normalize("NFKC", value).replace("\r\n", "\n").replace("\r", "\n")
+    lines = [re.sub(r"[^\S\n]+", " ", line).strip() for line in normalized.split("\n")]
+    collapsed: list[str] = []
+    previous_blank = False
+    for line in lines:
+        if not line:
+            if collapsed and not previous_blank:
+                collapsed.append("")
+            previous_blank = True
+            continue
+        collapsed.append(line)
+        previous_blank = False
+    return "\n".join(collapsed).strip()
+
+
 def normalize_url(value: str) -> str:
     parts = urlsplit(value.strip())
     query = urlencode(
@@ -93,7 +109,10 @@ def normalize_country_code(value: str | None, location_text: str | None = None) 
 
 
 def normalize_workplace(value: str | None, location_text: str | None = None) -> str:
-    haystack = f"{value or ''} {location_text or ''}".casefold()
+    explicit = (value or "").casefold()
+    if "hybrid" in explicit or "híbrido" in explicit or "hibrido" in explicit:
+        return "hybrid"
+    haystack = f"{explicit} {location_text or ''}".casefold()
     if any(token in haystack for token in ("remote", "telecommute", "remoto")):
         return "remote"
     if "hybrid" in haystack or "híbrido" in haystack or "hibrido" in haystack:

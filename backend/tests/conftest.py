@@ -24,6 +24,8 @@ def make_job(**overrides: object) -> JobView:
         "role_category": "software-engineering",
         "published_at": datetime(2026, 10, 1, tzinfo=UTC),
         "first_seen_at": datetime(2026, 10, 1, tzinfo=UTC),
+        "source_name": "Demo source",
+        "source_url": "https://example.com/jobs",
     }
     values.update(overrides)
     return JobView(**values)  # type: ignore[arg-type]

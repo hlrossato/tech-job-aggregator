@@ -27,6 +27,12 @@ class JobResponse(BaseModel):
     role_category: str | None
     published_at: datetime | None
     first_seen_at: datetime
+    description_html: str | None = None
+    source_name: str | None = None
+    source_url: HttpUrl | None = None
+    team: str | None = None
+    office_locations: str | None = None
+    remote_location: str | None = None
 
     @classmethod
     def from_domain(cls, job: JobView) -> "JobResponse":

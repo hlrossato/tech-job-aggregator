@@ -1,8 +1,9 @@
 from typing import Any
+from urllib.parse import urlsplit
 
 import scrapy
 
-from jobboard.crawler.extractors import parse_greenhouse_jobs
+from jobboard.crawler.extractors import apply_posting_page, parse_greenhouse_jobs
 
 
 class GreenhouseSpider(scrapy.Spider):
@@ -31,10 +32,37 @@ class GreenhouseSpider(scrapy.Spider):
             f"https://boards-api.greenhouse.io/v1/boards/{self.board}/jobs?content=true"
         )
 
+    async def start(self) -> Any:
+        for request in self.start_requests():
+            yield request
+
     def parse(self, response: Any) -> Any:
-        yield from parse_greenhouse_jobs(
+        jobs = parse_greenhouse_jobs(
             response.json(),
             board=self.board,
             company=self.company,
             source_url=self.source_url,
         )
+        limit = self.settings.getint("CLOSESPIDER_ITEMCOUNT", 0)
+        if limit > 0:
+            jobs = jobs[:limit]
+        for job in jobs:
+            url = str(job.get("canonical_url") or "")
+            host = urlsplit(url).netloc.removeprefix("www.")
+            if host == "stripe.com":
+                yield scrapy.Request(
+                    url,
+                    callback=self.parse_posting,
+                    errback=self.keep_job,
+                    cb_kwargs={"job": job},
+                    meta={"allow_offsite": True},
+                )
+            else:
+                yield job
+
+    def parse_posting(self, response: Any, job: dict[str, Any]) -> dict[str, Any]:
+        return apply_posting_page(job, response.text)
+
+    def keep_job(self, failure: Any) -> dict[str, Any] | None:
+        job = failure.request.cb_kwargs.get("job")
+        return dict(job) if isinstance(job, dict) else None

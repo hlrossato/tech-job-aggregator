@@ -60,6 +60,17 @@ test("search filter detail and outbound apply", async () => {
     "href",
     pythonJob.apply_url,
   );
+  expect(screen.getByRole("heading", { name: "About the role" })).toBeInTheDocument();
+  expect(screen.getByText("FastAPI")).toBeInTheDocument();
+  expect(screen.getByText("Security")).toBeInTheDocument();
+  expect(screen.getByText("Atlanta, South San Francisco HQ")).toBeInTheDocument();
+  expect(screen.getByText("Remote in United States")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Hybrid work at Stripe" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Pay and benefits" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Greenhouse" })).toHaveAttribute(
+    "href",
+    "https://example.com/jobs",
+  );
 });
 
 test("shows empty state", async () => {

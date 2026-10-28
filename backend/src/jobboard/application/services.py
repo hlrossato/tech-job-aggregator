@@ -6,6 +6,7 @@ from jobboard.application.classification import detect_seniority
 from jobboard.application.normalization import (
     make_fingerprint,
     normalize_country_code,
+    normalize_multiline,
     normalize_text,
     normalize_url,
     normalize_workplace,
@@ -35,6 +36,10 @@ class SearchJobsService:
         return self.jobs.facets()
 
 
+def _clean(value: str | None) -> str | None:
+    return normalize_text(value) if value else None
+
+
 class IngestJobService:
     def __init__(self, uow: UnitOfWork, classifier: TechnologyClassifier):
         self.uow = uow
@@ -48,10 +53,15 @@ class IngestJobService:
             draft,
             title=normalize_text(draft.title),
             company_name=normalize_text(draft.company_name),
-            description=normalize_text(draft.description),
+            description=normalize_multiline(draft.description),
+            description_html=draft.description_html.strip() if draft.description_html else None,
             canonical_url=normalize_url(draft.canonical_url),
             apply_url=normalize_url(draft.apply_url),
-            location_text=normalize_text(draft.location_text) if draft.location_text else None,
+            location_text=_clean(draft.location_text),
+            employment_type=_clean(draft.employment_type),
+            team=_clean(draft.team),
+            office_locations=_clean(draft.office_locations),
+            remote_location=_clean(draft.remote_location),
             country_code=normalize_country_code(draft.country_code, draft.location_text),
             workplace_type=WorkplaceType(
                 normalize_workplace(draft.workplace_type.value, draft.location_text)

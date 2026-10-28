@@ -34,6 +34,9 @@ class JobDraft:
     remote_scope: str | None = None
     workplace_type: WorkplaceType = WorkplaceType.UNSPECIFIED
     employment_type: str | None = None
+    team: str | None = None
+    office_locations: str | None = None
+    remote_location: str | None = None
     seniority: str | None = None
     salary_min: int | None = None
     salary_max: int | None = None
@@ -41,6 +44,7 @@ class JobDraft:
     language: str | None = None
     published_at: datetime | None = None
     expires_at: datetime | None = None
+    description_html: str | None = None
     technologies: tuple[str, ...] = ()
     role_category: str | None = None
     classification_confidence: float | None = None
@@ -83,6 +87,12 @@ class JobView:
     role_category: str | None
     published_at: datetime | None
     first_seen_at: datetime
+    description_html: str | None = None
+    source_name: str | None = None
+    source_url: str | None = None
+    team: str | None = None
+    office_locations: str | None = None
+    remote_location: str | None = None
 
 
 @dataclass(slots=True, frozen=True)

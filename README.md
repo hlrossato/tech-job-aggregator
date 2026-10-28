@@ -30,6 +30,12 @@ Enabled sources can be crawled without a host virtualenv. Sources in `backend/so
 docker compose --profile crawler run --rm crawler
 ```
 
+Cap a local trial so only a few jobs are stored. `CRAWL_ITEM_LIMIT` is read by the crawler command already set on the service:
+
+```bash
+docker compose --profile crawler run --rm -e CRAWL_ITEM_LIMIT=20 crawler
+```
+
 Production uses the same images with [compose.prod.yml](compose.prod.yml). See [deploy/README.md](deploy/README.md).
 
 ## Local development
@@ -60,7 +66,16 @@ Sources live in `backend/sources.toml`. They are disabled until you review terms
 python scripts/crawl_sources.py backend/sources.toml
 ```
 
-Overlapping crawls are blocked by `backend/.crawl-lock`. Jobs not seen after a source-specific grace period are expired.
+To see real jobs locally without storing a whole board, set one source to `enabled = true` and cap the inserts. The feed is still downloaded once. A capped run does not expire the rest of that source. Do not commit the enabled flag. With Docker, the sources file is mounted, so enabling it does not need an image rebuild:
+
+```bash
+docker compose up --build
+docker compose --profile crawler run --rm -e CRAWL_ITEM_LIMIT=20 crawler
+```
+
+Open http://localhost:5173. An empty search lists the stored jobs. A first check is `greenhouse-stripe` with a cap of 20. The same cap from a host checkout is `--limit 20`, and that flag overrides `CRAWL_ITEM_LIMIT` when both are set. Leave the cap unset for a full crawl.
+
+Overlapping crawls are blocked by `backend/.crawl-lock`. An uncapped crawl expires jobs that were not seen after a source-specific grace period.
 
 ## Tests
 

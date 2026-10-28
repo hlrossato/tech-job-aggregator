@@ -19,6 +19,12 @@ export type Job = {
   role_category: string | null;
   published_at: string | null;
   first_seen_at: string;
+  description_html: string | null;
+  source_name: string | null;
+  source_url: string | null;
+  team: string | null;
+  office_locations: string | null;
+  remote_location: string | null;
 };
 
 export type JobListResponse = {

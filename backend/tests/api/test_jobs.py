@@ -40,6 +40,8 @@ def test_get_job_and_facets() -> None:
     detail = client.get(f"/api/v1/jobs/{job.id}")
     assert detail.status_code == 200
     assert detail.json()["company_name"] == "Northwind Labs"
+    assert detail.json()["source_name"] == "Demo source"
+    assert detail.json()["source_url"] == "https://example.com/jobs"
     facets = client.get("/api/v1/jobs/facets")
     assert facets.status_code == 200
     assert facets.json()["technologies"]["Python"] == 1

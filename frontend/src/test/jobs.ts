@@ -10,7 +10,7 @@ export const pythonJob: Job = {
   location_text: "Remote, Brazil",
   country_code: "BR",
   workplace_type: "remote",
-  employment_type: "full-time",
+  employment_type: "Full time",
   seniority: "senior",
   salary_min: null,
   salary_max: null,
@@ -19,6 +19,13 @@ export const pythonJob: Job = {
   role_category: "software-engineering",
   published_at: "2026-10-01T00:00:00Z",
   first_seen_at: "2026-10-01T00:00:00Z",
+  description_html:
+    "<h2>About the role</h2><ul><li>Python</li><li>FastAPI</li></ul><h2>Hybrid work at Stripe</h2><p>Office or remote.</p><h2>Pay and benefits</h2><p>Annual base salary range.</p>",
+  source_name: "Greenhouse",
+  source_url: "https://example.com/jobs",
+  team: "Security",
+  office_locations: "Atlanta, South San Francisco HQ",
+  remote_location: "Remote in United States",
 };
 
 export const jobList: JobListResponse = {

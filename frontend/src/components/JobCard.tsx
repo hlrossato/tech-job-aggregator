@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 
 import type { Job } from "../api/types";
+import { JobSource } from "./JobDescription";
 
 function formatDate(value: string | null) {
   if (!value) return "Date unknown";
@@ -16,9 +17,11 @@ export function JobCard({ job }: { job: Job }) {
         </Link>
         <p className="muted">
           {job.company_name}
+          {job.team ? ` · ${job.team}` : ""}
           {job.location_text ? ` · ${job.location_text}` : ""}
           {` · ${formatDate(job.published_at)}`}
         </p>
+        <JobSource job={job} />
         <p className="tags">
           {job.technologies.slice(0, 5).map((technology) => (
             <span key={technology}>{technology}</span>

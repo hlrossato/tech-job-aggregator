@@ -92,7 +92,8 @@ h1 {
 .job-card {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
+  align-items: center;
+  gap: 36px;
   padding: 18px;
   margin-bottom: 12px;
 }
@@ -110,6 +111,7 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin: 10px 0 0;
 }
 
 .tags span {
@@ -129,6 +131,11 @@ h1 {
   white-space: nowrap;
 }
 
+.detail .apply {
+  display: inline-block;
+  margin-top: 36px;
+}
+
 .pagination {
   display: flex;
   align-items: center;
@@ -146,9 +153,59 @@ h1 {
 }
 
 .detail .description {
-  white-space: pre-wrap;
   padding: 20px;
   margin-top: 24px;
+}
+
+.detail .description.plain {
+  white-space: pre-wrap;
+}
+
+.detail .description :is(h2, h3, h4) {
+  font-size: 1.25rem;
+  margin: 1.1em 0 0.35em;
+}
+
+.detail .description :is(p, li) {
+  margin: 0.35em 0;
+}
+
+.detail .description :is(ul, ol) {
+  margin: 0.4em 0 0.8em;
+  padding-left: 1.25em;
+}
+
+.source {
+  margin: 0 0 8px;
+  color: #6f6558;
+  font-size: 0.92rem;
+}
+
+.source a {
+  color: #1c1915;
+}
+
+.facts {
+  display: grid;
+  gap: 14px;
+  margin: 22px 0 0;
+  padding: 18px 20px;
+  background: #f7f4ee;
+  border-radius: 16px;
+}
+
+.facts div {
+  display: grid;
+  gap: 2px;
+}
+
+.facts dt {
+  font-weight: 650;
+}
+
+.facts dd {
+  margin: 0;
+  color: #5b5348;
 }
 
 .sr-only {

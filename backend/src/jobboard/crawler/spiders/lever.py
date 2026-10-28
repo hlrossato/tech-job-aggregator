@@ -29,6 +29,10 @@ class LeverSpider(scrapy.Spider):
     def start_requests(self) -> Any:
         yield scrapy.Request(f"https://api.lever.co/v0/postings/{self.site}?mode=json")
 
+    async def start(self) -> Any:
+        for request in self.start_requests():
+            yield request
+
     def parse(self, response: Any) -> Any:
         yield from parse_lever_jobs(
             response.json(),

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 
 import { getJob } from "../api/client";
+import { JobDescription, JobFacts, JobSource } from "../components/JobDescription";
 
 export function JobPage() {
   const { jobId = "" } = useParams();
@@ -30,15 +31,17 @@ export function JobPage() {
         {job.company_name}
         {job.location_text ? ` · ${job.location_text}` : ""}
       </p>
+      <JobSource job={job} />
       <p className="tags">
         {job.technologies.map((technology) => (
           <span key={technology}>{technology}</span>
         ))}
       </p>
+      <JobFacts job={job} />
       <a className="apply" href={job.apply_url} target="_blank" rel="noreferrer noopener">
         Apply on original site
       </a>
-      <article className="description">{job.description}</article>
+      <JobDescription job={job} />
     </main>
   );
 }

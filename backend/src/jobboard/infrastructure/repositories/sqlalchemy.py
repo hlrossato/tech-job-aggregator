@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy import Select, func, or_, select, update
 from sqlalchemy.orm import Session, selectinload
 
+from jobboard.application.html_content import present_description
 from jobboard.domain.models import (
     Facets,
     JobDraft,
@@ -30,18 +31,39 @@ def _slug(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", value.casefold()).strip("-")
 
 
+def posting_place_label(adapter: str | None, name: str | None = None) -> str | None:
+    labels = {
+        "greenhouse": "Greenhouse",
+        "lever": "Lever",
+        "ashby": "Ashby",
+    }
+    if adapter in labels:
+        return labels[adapter]
+    return name
+
+
 def _to_view(model: JobModel) -> JobView:
+    description, description_html = present_description(model.description, model.description_html)
+    source = model.source
     return JobView(
         id=model.id,
         title=model.title,
         company_name=model.company.name,
-        description=model.description,
+        description=description,
+        description_html=description_html,
+        source_name=(
+            posting_place_label(source.adapter, source.name) if source is not None else None
+        ),
+        source_url=source.base_url if source is not None else None,
         canonical_url=model.canonical_url,
         apply_url=model.apply_url,
         location_text=model.location_text,
         country_code=model.country_code,
         workplace_type=WorkplaceType(model.workplace_type),
         employment_type=model.employment_type,
+        team=model.team,
+        office_locations=model.office_locations,
+        remote_location=model.remote_location,
         seniority=model.seniority,
         salary_min=model.salary_min,
         salary_max=model.salary_max,
@@ -60,7 +82,11 @@ class SQLAlchemyJobRepository:
     def get(self, job_id: UUID) -> JobView | None:
         statement = (
             select(JobModel)
-            .options(selectinload(JobModel.company), selectinload(JobModel.technologies))
+            .options(
+                selectinload(JobModel.company),
+                selectinload(JobModel.source),
+                selectinload(JobModel.technologies),
+            )
             .where(JobModel.id == job_id, JobModel.status == JobStatus.ACTIVE.value)
         )
         model = self.session.scalar(statement)
@@ -110,7 +136,11 @@ class SQLAlchemyJobRepository:
         count_statement = select(func.count()).select_from(filtered.order_by(None).subquery())
         total = self.session.scalar(count_statement) or 0
         statement = (
-            filtered.options(selectinload(JobModel.company), selectinload(JobModel.technologies))
+            filtered.options(
+                selectinload(JobModel.company),
+                selectinload(JobModel.source),
+                selectinload(JobModel.technologies),
+            )
             .offset((criteria.page - 1) * criteria.page_size)
             .limit(criteria.page_size)
         )
@@ -201,6 +231,7 @@ class SQLAlchemyJobRepository:
             "fingerprint": fingerprint,
             "title": draft.title,
             "description": draft.description,
+            "description_html": draft.description_html,
             "canonical_url": draft.canonical_url,
             "apply_url": draft.apply_url,
             "location_text": draft.location_text,
@@ -208,6 +239,9 @@ class SQLAlchemyJobRepository:
             "remote_scope": draft.remote_scope,
             "workplace_type": draft.workplace_type.value,
             "employment_type": draft.employment_type,
+            "team": draft.team,
+            "office_locations": draft.office_locations,
+            "remote_location": draft.remote_location,
             "seniority": draft.seniority,
             "salary_min": draft.salary_min,
             "salary_max": draft.salary_max,
