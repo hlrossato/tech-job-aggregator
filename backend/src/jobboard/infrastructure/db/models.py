@@ -73,9 +73,9 @@ class JobModel(Base):
     __tablename__ = "jobs"
     __table_args__ = (
         UniqueConstraint("source_id", "external_id", name="uq_jobs_source_external"),
+        UniqueConstraint("fingerprint", name="uq_jobs_fingerprint"),
         Index("ix_jobs_status_published", "status", "published_at"),
         Index("ix_jobs_country_status", "country_code", "status"),
-        Index("ix_jobs_fingerprint", "fingerprint"),
         Index("ix_jobs_source_canonical", "source_id", "canonical_url"),
         Index("ix_jobs_search_vector", "search_vector", postgresql_using="gin"),
     )

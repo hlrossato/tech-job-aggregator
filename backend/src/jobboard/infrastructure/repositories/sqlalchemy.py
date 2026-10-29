@@ -225,6 +225,13 @@ class SQLAlchemyJobRepository:
                     JobModel.canonical_url == draft.canonical_url,
                 )
             )
+        if job is None:
+            job = self.session.scalars(
+                select(JobModel)
+                .where(JobModel.fingerprint == fingerprint)
+                .order_by(JobModel.published_at.desc().nullslast(), JobModel.last_seen_at.desc())
+                .limit(1)
+            ).first()
         values = {
             "company_id": company.id,
             "external_id": draft.external_id,

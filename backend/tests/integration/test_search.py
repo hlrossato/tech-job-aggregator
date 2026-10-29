@@ -55,6 +55,22 @@ def test_upsert_search_and_expire(session_factory) -> None:
     )
     job_id = service.ingest(draft)
     service.ingest(draft)
+    duplicate = JobDraft(
+        source_key="itest",
+        source_name="Integration",
+        source_base_url="https://example.com",
+        source_adapter="demo",
+        external_id="py-2",
+        title="Python Developer",
+        company_name="Test Co",
+        description="Python FastAPI PostgreSQL, second posting of the same role",
+        canonical_url="https://example.com/jobs/py-2",
+        apply_url="https://example.com/jobs/py-2",
+        location_text="Brazil",
+        workplace_type=WorkplaceType.REMOTE,
+        published_at=datetime.now(UTC),
+    )
+    assert service.ingest(duplicate) == job_id
 
     with session_factory() as session:
         search = SearchJobsService(SQLAlchemyJobRepository(session))
